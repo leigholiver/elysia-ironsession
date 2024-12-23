@@ -1,0 +1,39 @@
+{
+  "name": "elysia-ironsession",
+  "description": "A secure session management plugin for Elysia.js using iron-session.",
+  "keywords": [
+    "elysia",
+    "elysia-plugin",
+    "session",
+    "iron-session"
+  ],
+  "version": "0.0.1",
+  "author": "Leigh Oliver",
+  "repository": "https://github.com/leigholiver/elysia-ironsession",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "tsc",
+    "test": "bun test ./tests/** --coverage"
+  },
+  "dependencies": {
+    "elysia": "^1.1.27",
+    "iron-session": "^8.0.4"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.14",
+    "typescript": "^5.7.2"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  }
+}
