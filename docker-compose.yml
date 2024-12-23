@@ -1,0 +1,6 @@
+services:
+  elysia-ironsession:
+    image: oven/bun:latest
+    volumes:
+      - ./:/home/bun/app
+    command: [bash]

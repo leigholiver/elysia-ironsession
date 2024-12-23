@@ -1,0 +1,36 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests
+        run: bun run test
+
+      - name: Run build
+        run: bun run build
+
+      - name: Check if version already exists
+        id: version_check
+        run: |
+          latest_release=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name || echo "v0.0.0")
+          version=$(jq -r .version package.json)
+          echo "Latest release: $latest_release"
+          echo "Current version: v$version"
+          if [ "$latest_release" = "v$version" ]; then
+            echo "Version v$version has already been released"
+            exit 1
+          fi
