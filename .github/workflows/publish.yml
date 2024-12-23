@@ -31,11 +31,9 @@ jobs:
           echo "version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
+        run: |
+          gh release create "v${{ steps.package_version.outputs.version }}" \
+            --title "Release v${{ steps.package_version.outputs.version }}" \
+            --generate-notes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.package_version.outputs.version }}
-          release_name: Release v${{ steps.package_version.outputs.version }}
-          draft: false
-          prerelease: false
+          GH_TOKEN: ${{ github.token }}

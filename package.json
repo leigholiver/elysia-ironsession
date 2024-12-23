@@ -7,9 +7,12 @@
     "session",
     "iron-session"
   ],
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "Leigh Oliver",
-  "repository": "https://github.com/leigholiver/elysia-ironsession",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leigholiver/elysia-ironsession"
+  },
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
