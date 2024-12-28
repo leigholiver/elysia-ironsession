@@ -17,35 +17,33 @@ describe('Elysia Session Plugin', () => {
                 cookieName: 'test_session'
             }))
     }
+
     let app: ReturnType<typeof newElysia>
+
     beforeEach(() => {
         app = newElysia()
     })
 
     it('should handle new session with no data', async () => {
-        app.get('/test-empty', async ({ getSessionData }) => {
-            const data = await getSessionData()
-            return { sessionData: data }
+        app.get('/test-empty', async ({ session }) => {
+            return { sessionData: session }
         })
 
         const response = await app
             .handle(new Request('http://localhost/test-empty'))
             .then(res => res.json())
 
-        expect(response).toEqual({ sessionData: null })
+        expect(response).toEqual({ sessionData: {} })
     })
 
     it('should set and retrieve session data', async () => {
-        app.post('/login', async ({ setSessionData }) => {
-            await setSessionData(session => {
-                session.userId = 123
-                session.isLoggedIn = true
-            })
+        app.post('/login', async ({ session }) => {
+            session.userId = 123
+            session.isLoggedIn = true
             return { success: true }
         })
-        .get('/profile', async ({ getSessionData }) => {
-            const data = await getSessionData()
-            return { sessionData: data }
+        .get('/profile', async ({ session }) => {
+            return { sessionData: session }
         })
 
         // First, set the session data
@@ -74,9 +72,8 @@ describe('Elysia Session Plugin', () => {
     })
 
     it('should handle invalid session data', async () => {
-        app.get('/test-invalid', async ({ getSessionData }) => {
-            const data = await getSessionData()
-            return { sessionData: data }
+        app.get('/test-invalid', async ({ session }) => {
+            return { sessionData: session }
         })
 
         // Try with an invalid session cookie
@@ -92,18 +89,14 @@ describe('Elysia Session Plugin', () => {
     })
 
     it('should update existing session data', async () => {
-        app.post('/set-initial', async ({ setSessionData }) => {
-            await setSessionData(session => {
-                session.userId = 123
-                session.isLoggedIn = false
-            })
+        app.post('/set-initial', async ({ session }) => {
+            session.userId = 123
+            session.isLoggedIn = false
             return { success: true }
         })
-        .post('/update', async ({ setSessionData, getSessionData }) => {
-            await setSessionData(session => {
-                session.isLoggedIn = true
-            })
-            return await getSessionData()
+        .post('/update', async ({ session }) => {
+            session.isLoggedIn = true
+            return session
         })
 
         // Set initial session data
@@ -127,105 +120,164 @@ describe('Elysia Session Plugin', () => {
         })
     })
 
-    it('should handle setSessionData with no prior session', async () => {
-        app.post('/set-new', async ({ setSessionData, getSessionData }) => {
-            await setSessionData(session => {
-                session.userId = 999;
-                session.isLoggedIn = true;
-            });
-            // Return the session data immediately after setting it
-            return { sessionData: await getSessionData() };
-        });
+    it('should handle new session creation with direct assignment', async () => {
+        app.post('/set-new', async ({ session }) => {
+            session.userId = 999
+            session.isLoggedIn = true
+            return { sessionData: session }
+        })
 
         const response = await app
             .handle(new Request('http://localhost/set-new', {
                 method: 'POST'
-            }));
+            }))
 
-        const cookieHeader = response.headers.get('set-cookie');
-        expect(cookieHeader).toBeTruthy();
+        const cookieHeader = response.headers.get('set-cookie')
+        expect(cookieHeader).toBeTruthy()
 
-        // Verify the response data
-        const responseData = await response.json();
+        const responseData = await response.json()
         expect(responseData).toEqual({
             sessionData: {
                 userId: 999,
                 isLoggedIn: true
             }
-        });
-    });
+        })
+    })
 
-    it('should handle destruction of session data', async () => {
-        app.post('/set-destroy', async ({ setSessionData }) => {
-            await setSessionData(session => {
-                // Set the session to undefined explicitly
-                Object.keys(session).forEach(key => {
-                    delete (session as any)[key];
-                });
-            });
-            return { success: true };
-        });
+    it('should handle deletion of session data', async () => {
+        app.post('/set-data', async ({ session }) => {
+            session.userId = 123
+            session.isLoggedIn = true
+            return { success: true }
+        })
+        .post('/destroy', async ({ session }) => {
+            delete session.userId
+            delete session.isLoggedIn
+            return { session }
+        })
 
-        const response = await app
-            .handle(new Request('http://localhost/set-destroy', {
-                method: 'POST'
-            }));
+        // First set some data
+        const setResponse = await app
+            .handle(new Request('http://localhost/set-data', { method: 'POST' }))
+        const sessionCookie = setResponse.headers.get('set-cookie')
 
-        const cookieHeader = response.headers.get('set-cookie');
-        expect(cookieHeader).toBeTruthy();
-    });
+        // Then destroy it
+        const destroyResponse = await app
+            .handle(new Request('http://localhost/destroy', {
+                method: 'POST',
+                headers: {
+                    cookie: sessionCookie!
+                }
+            }))
+
+        const responseData = await destroyResponse.json()
+        expect(responseData.session).toEqual({})
+    })
 
     it('should handle empty options', async () => {
         const minimalApp = new Elysia()
             .use(IronSession<TestSession>({
                 password: SESSION_SECRET
-            }));
+            }))
 
-        minimalApp.get('/test', async ({ getSessionData }) => {
-            const data = await getSessionData();
-            return { sessionData: data };
-        });
+        minimalApp.get('/test', async ({ session }) => {
+            return { sessionData: session }
+        })
 
         const response = await minimalApp
             .handle(new Request('http://localhost/test'))
-            .then(res => res.json());
+            .then(res => res.json())
 
-        expect(response).toEqual({ sessionData: null });
-    });
+        expect(response).toEqual({ sessionData: {} })
+    })
 
     it('should set all cookie properties correctly', async () => {
-        // Create app with all options specified
         const customApp = new Elysia()
             .use(IronSession<TestSession>({
                 password: SESSION_SECRET,
                 cookieName: 'custom_session',
                 ttl: 3600,
                 secure: true
-            }));
+            }))
 
-        customApp.post('/set-all', async ({ setSessionData, getSessionData }) => {
-            await setSessionData(session => {
-                session.userId = 123;
-            });
-            // Return both the session data and the cookie properties
-            return { sessionData: await getSessionData() };
-        });
+        customApp.post('/set-all', async ({ session }) => {
+            session.userId = 123
+            return { sessionData: session }
+        })
 
         const response = await customApp
-            .handle(new Request('http://localhost/set-all', { method: 'POST' }));
+            .handle(new Request('http://localhost/set-all', { method: 'POST' }))
 
-        const cookieHeader = response.headers.get('set-cookie');
-        expect(cookieHeader).toBeTruthy();
-        expect(cookieHeader).toContain('Max-Age=3600');
-        expect(cookieHeader).toContain('HttpOnly');
-        expect(cookieHeader).toContain('Secure');
-        expect(cookieHeader).toContain('custom_session=');
+        const cookieHeader = response.headers.get('set-cookie')
+        expect(cookieHeader).toBeTruthy()
+        expect(cookieHeader).toContain('Max-Age=3600')
+        expect(cookieHeader).toContain('HttpOnly')
+        expect(cookieHeader).toContain('Secure')
+        expect(cookieHeader).toContain('custom_session=')
 
-        const data = await response.json();
+        const data = await response.json()
         expect(data).toEqual({
             sessionData: {
                 userId: 123
             }
-        });
-    });
+        })
+    })
+
+    it('should handle nested session data', async () => {
+        interface NestedSession {
+            user?: {
+                profile?: {
+                    name?: string
+                    settings?: {
+                        theme?: string
+                    }
+                }
+            }
+        }
+
+        const nestedApp = new Elysia()
+            .use(IronSession<NestedSession>({
+                password: SESSION_SECRET
+            }))
+
+        nestedApp.post('/set-nested', async ({ session }) => {
+            session.user = {
+                profile: {
+                    name: 'John',
+                    settings: {
+                        theme: 'dark'
+                    }
+                }
+            }
+            return { success: true }
+        })
+        .get('/get-nested', async ({ session }) => {
+            return { data: session }
+        })
+
+        // Set nested data
+        const setResponse = await nestedApp
+            .handle(new Request('http://localhost/set-nested', { method: 'POST' }))
+        const sessionCookie = setResponse.headers.get('set-cookie')
+
+        // Get nested data
+        const getResponse = await nestedApp
+            .handle(new Request('http://localhost/get-nested', {
+                headers: {
+                    cookie: sessionCookie!
+                }
+            }))
+
+        const responseData = await getResponse.json()
+        expect(responseData.data).toEqual({
+            user: {
+                profile: {
+                    name: 'John',
+                    settings: {
+                        theme: 'dark'
+                    }
+                }
+            }
+        })
+    })
 })
