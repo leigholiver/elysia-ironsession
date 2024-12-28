@@ -17,6 +17,9 @@ bun add elysia-ironsession
 ```
 
 ## Usage
+Usage is the same as [Elysia's reactive Cookie](https://elysiajs.com/patterns/cookie#reactivity) - you extract the `session` property and access its items directly.
+
+There's no get/set, you can extract the property name and retrieve or update its value directly.
 
 Basic example:
 
@@ -38,18 +41,20 @@ const app = new Elysia()
       secure: process.env.NODE_ENV === 'production'
     })
   )
-  .get('/profile', async ({ getSessionData }) => {
-    const session = await getSessionData()
+  .get('/profile', async ({ session }) => {
     if (!session?.isLoggedIn) {
       throw new Error('Unauthorized')
     }
     return { userId: session.userId }
   })
-  .post('/login', async ({ setSessionData }) => {
-    await setSessionData(session => {
-      session.userId = 123
-      session.isLoggedIn = true
-    })
+  .get('/login', async ({ session }) => {
+    session.userId = 123
+    session.isLoggedIn = true
+    return { success: true }
+  })
+  .get('/logout', async ({ session }) => {
+    delete session.userId
+    delete session.isLoggedIn
     return { success: true }
   })
   .listen(3000)
@@ -66,38 +71,6 @@ interface SessionOptions {
   cookieName?: string;   // Optional: Name of the session cookie (default: 'session')
   secure?: boolean;      // Optional: Set the secure attribute of the cookie (default true)
 }
-```
-
-## API
-
-### getSessionData()
-
-Retrieves the current session data.
-
-```typescript
-const session = await getSessionData()
-if (session?.userId) {
-  // User is logged in
-}
-```
-
-### setSessionData(updater)
-
-Updates the session data using an updater function.
-
-```typescript
-await setSessionData(session => {
-  session.userId = 123
-  session.isLoggedIn = true
-})
-```
-
-## Testing
-
-Run tests using:
-
-```bash
-bun run test
 ```
 
 ## Contributing
