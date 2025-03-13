@@ -7,7 +7,7 @@
     "session",
     "iron-session"
   ],
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "Leigh Oliver",
   "bugs": "https://github.com/leigholiver/elysia-ironsession/issues",
   "homepage": "https://github.com/leigholiver/elysia-ironsession",
