@@ -31,7 +31,7 @@
     "iron-session": "^8.0.4"
   },
   "peerDependencies": {
-    "elysia": "^1.1.27"
+    "elysia": ">=1.0.0"
   },
   "devDependencies": {
     "@types/bun": "^1.2.5",
